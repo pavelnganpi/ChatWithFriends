@@ -1,0 +1,227 @@
+<html>
+<head>
+  <title>Chat with socket.io and node.js</title>
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.0.3/css/bootstrap.min.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" type="text/css" href="http://fonts.googleapis.com/css?family=Tangerine">
+  <style>
+    .w{
+      color: pink;
+    }
+
+    #contentWrap {
+      display: none;
+
+    }
+    div#chatroom {
+    display: block;
+    height: 500px;
+    width: 35%;
+    border: 1px solid lightpink;
+    overflow: auto;
+    margin-bottom: 10px;
+    position: relative;
+    margin-left: 0.5%;
+    margin-bottom: 4%;
+    margin-top: 0.2%;
+    background-color: #FFE5B4;
+    }
+
+    ul#chat {
+      list-style: none;
+      position: absolute;
+      margin-bottom: 0.5px;
+    }
+
+    input#message {
+      width: 35%;
+      margin-bottom: 0.5%;
+    }
+    body {
+      background-color: #EBF4F4;
+    }
+   
+    .error{
+      color: red;
+    }
+    .whisper {
+      color: grey;
+      font-style: italic;
+    }
+    .msgBox{
+      margin-top: 5px;
+      position: absolute;
+    }
+    #users{
+      display: inline;
+      height: 200px;
+      width: 15%;
+      border: 1px solid lightpink;
+      overflow: auto;
+      margin-bottom: 10px;
+      position: absolute;
+      margin-top: 4%;
+      bottom: 12%;
+      left: 50%;
+      margin-left: 0.5%;
+      background-color: #FFE5B4;
+      }
+   
+    .error{
+      color: red;
+    }
+    .lb{
+      display: block;
+      color: lightpink;
+      font-size: 30px;
+      left: 50%;
+      float: right;
+    }
+    .jumbotron {
+      background-color: #FFE5B4;
+
+    }
+    .header{
+      font-family: 'Tangerine', serif;
+      font-size: 48px;
+      color: pink;
+    }
+    .ol{
+      bottom: 20%;
+      left: 50%;
+    }
+    h2.mh{
+      font-family: 'Tangerine', serif;
+      font-size: 60px;
+      letter-spacing: 10px
+    }
+
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div id="nickWrap">
+      <p id='name' class='navbar-form'>Enter username:</p>
+      <p id= 'nickError'></p>
+      <form id="setNick">
+        <input size'35' id='nickname'></input>
+        <input type="submit" class=" btn btn-primary"></input>
+      </form>
+        <div class="jumbotron">
+          <h2 class='mh'>Welcome to ChatWithFriends</h2>
+          <p class="lead"> You can do group messaging with friends, gossip with friends, and just have fun, Sounds awesome right> So get going by signing up above, Have funnnn!</p>
+          <pre id='w'> to send a gossip to a friend,
+                     use "/g" "name of friend" "message"
+                     for example to send a gossip message to 
+                     john, you do /g john hey wassup! 
+                     On the chat page. those online are
+                     displayed right of the chat box</pre>
+        </div>
+    </div>
+  </div>
+  <div class="container">
+    <div id="contentWrap">
+      <h2 class='header'> Welcome to ChatWithFriends</h2>
+      <div id="chatroom">
+        <ul id="chat">
+        </ul>
+      </div>
+      <form id="send-message">
+        <input type="text" size='35' name="chat_box" value="" id="message" placeholder="type to chat..." />
+        <input type="submit" class="btn btn-primary"></input>
+      </form>
+      <a id='users'></a>
+    </div>
+  </div>
+
+  <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+
+  //referencing all the inputs forms above
+    jQuery(function($){
+      var socket = io.connect();
+      var $messageForm = $('#send-message');
+      var $messageBox = $('#message');
+      var $nickForm= $('#setNick');
+      var $users= $('#users');
+      var $nickError= $('#nickError');
+      var $nickBox= $('#nickname');
+      var $chat = $('#chat');
+
+      // sends username to server to 
+      //detect if username isvalid
+      //receives valid usenname data from server 
+      //and displays on page is username is take
+      $nickForm.submit( function (e){
+        e.preventDefault();
+        socket.emit('new user', $nickBox.val(), function (data){
+          if (data){
+            $('#nickWrap').hide();
+            $('#contentWrap').show();
+          }
+          else {
+            $nickError.html('that username is already taken');
+          }
+
+        });
+        nickBox.val('');
+      });
+
+      //trying to display the username
+      //receiving the 'usename' sent from server
+      //and looping through the nicknames array
+      //to append the names to the 'users' div
+
+      socket.on ('usernames', function (data){
+        var html= '';
+        for (var i=0; i<data.length; i++){
+          html += data[i] + '<br/>';
+        }
+        $users.html(html);
+
+      });
+      
+      //sends message to server
+      $messageForm.submit(function(e){
+        e.preventDefault();
+        socket.emit('send message', $messageBox.val(), function (data){
+          $chat.append('<span class= "error">' + data +"</span><br/>");
+        });
+        $messageBox.val('');
+      });
+
+      //receives the saved messages from the server
+      //and sends them to the chatbox
+      socket.on('load all msgs', function (docs){
+        for (var i=0; i<docs.length;i++){
+          displayMsg(docs[i]);
+
+        }
+      });
+
+      //function to display the messages to the 
+      //chatbox
+      function displayMsg(data, type){
+        $chat.append('<span class="msg" ><b>' + data.nick + ': </b>' + data.msg + "</span><br/>");
+      }
+      
+      //recieves message from server
+      socket.on('new message', function (data){
+        displayMsg(data);
+      });
+
+      socket.on('whisper', function (data){
+        $chat.append('<span class= "whisper"><b>' + data.nick + ': </b>' + data.msg + "</span><br/>");
+
+      });
+    
+      socket.on('exit', function (data){
+        $chat.append('<span class="error" ><b>'+data.nick + ": left the chatroom</span><br/>");
+      });
+
+    });
+  </script>
+</body>
+</html>
